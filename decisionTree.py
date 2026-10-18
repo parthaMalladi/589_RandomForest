@@ -3,15 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 import math
-
-# load data
-data = pd.read_csv("datasets/loan.csv")
-
-rows, cols = data.shape
-
-# split into attributes and label columns
-X = data.iloc[:, 0:cols - 1]
-y = data.iloc[:, cols - 1]
+import random
 
 # find entropy of the overall dataset
 def findEntropy(labelset):
@@ -124,13 +116,18 @@ def getColumnEntropy(mem):
     return -temp
            
 # create a hashmap for each column with their information gain
-def getInfoGainMap(dataset, labelset):
+def getInfoGainMap(dataset, labelset, m):
     # find overall entropy
     overallEntropy = findEntropy(labelset)
     gainMap = {}
+    
+    # pick the random columns we want to split on
+    m = max(1, m)
+    columns = list(dataset.columns)
+    columns = random.sample(columns, min(m, len(columns)))
 
     # using the overall entropy, find the information gain of each column and add it to the hashmap
-    for col in dataset.columns:
+    for col in columns:
         if pd.api.types.is_numeric_dtype(dataset[col]):
             gain = handleNumericalCols(dataset, labelset, col, overallEntropy)
         else:
@@ -141,11 +138,12 @@ def getInfoGainMap(dataset, labelset):
 
 # recursively build the decision tree
 class Node():
-    def __init__(self, dataset, labelset, minSize, parentMajority=None):
+    def __init__(self, dataset, labelset, minSize, m, parentMajority=None):
         # track the current dataset and labelset
         self.dataset = dataset
         self.labelset = labelset
         self.minSize = minSize
+        self.m = m
 
         # fields for the node so the new instance knows what to split on
         self.isLeaf = False
@@ -183,7 +181,7 @@ class Node():
             return
 
         # find the information gain map
-        gainMap = getInfoGainMap(dataset, labelset)
+        gainMap = getInfoGainMap(dataset, labelset, self.m)
         highestGainCol = None
         currGainVal = (float('-inf'), None)
 
@@ -217,7 +215,7 @@ class Node():
             for attr, indexList in groups.items():
                 subDataset = dataset.loc[indexList].drop(columns=[self.focusColumn])
                 subLabelset = labelset.loc[indexList]
-                self.children[attr] = Node(subDataset, subLabelset, self.minSize, self.majority)
+                self.children[attr] = Node(subDataset, subLabelset, self.minSize, self.m, self.majority)
         else:
             # split on the threshold using a numpy mask so rows are picked by position
             maskList = [False] * len(self.dataset)
@@ -230,14 +228,15 @@ class Node():
             mask = np.array(maskList)
                 
             # numerical columns are NOT dropped, they can be split again with a different threshold
-            self.children["leq"] = Node(dataset[mask], labelset[mask], self.minSize, self.majority)
-            self.children["gt"] = Node(dataset[~mask], labelset[~mask], self.minSize, self.majority)
+            self.children["leq"] = Node(dataset[mask], labelset[mask], self.minSize, self.m, self.majority)
+            self.children["gt"] = Node(dataset[~mask], labelset[~mask], self.minSize, self.m, self.majority)
 
 # create a tree using the Node class
 class Tree():
     def __init__(self, dataset, labelset, minSize=1):
         self.minSize = minSize
-        self.root = Node(dataset, labelset, minSize)
+        self.numCols = dataset.shape[1]
+        self.root = Node(dataset, labelset, minSize, math.ceil(math.sqrt(self.numCols)))
 
     # predicts a label given an instance
     def predict(self, instance):
@@ -280,44 +279,4 @@ def calculateAccuracy(tree, dataset, labelset):
     return correct / len(dataset)
 
 if __name__ == "__main__":
-    trainAccuracies = []
-    testAccuracies = []
-
-    # run experiment 100 times
-    for iteration in range(100):
-        # 80/20 split for each iteration with shuffle
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
-        
-        # create a new decision tree based on the current training set
-        tree = Tree(X_train, y_train, 1)
-        
-        # get the accuracy ratio for train and test dataset
-        trainRatio = calculateAccuracy(tree, X_train, y_train)
-        testRatio = calculateAccuracy(tree, X_test, y_test)
-        
-        # append to the list to have a measurement for all 100 runs
-        trainAccuracies.append(trainRatio)
-        testAccuracies.append(testRatio)
-
-    # compute summary statistics
-    trainMean = np.mean(trainAccuracies)
-    trainDeviation = np.std(trainAccuracies)
-    testMean = np.mean(testAccuracies)
-    testDeviation = np.std(testAccuracies)
-
-    # Training Set Accuracy
-    plt.figure(figsize=(6, 5))
-    plt.hist(trainAccuracies, bins=15, color='skyblue', edgecolor='black')
-    plt.title(f"Training Set Accuracy\nMean: {trainMean:.4f} | Std: {trainDeviation:.4f}")
-    plt.xlabel("Accuracy")
-    plt.ylabel("Frequency")
-    plt.show()
-
-
-    # Testing Set Accuracy
-    plt.figure(figsize=(6, 5))
-    plt.hist(testAccuracies, bins=15, color='salmon', edgecolor='black')
-    plt.title(f"Testing Set Accuracy\nMean: {testMean:.4f} | Std: {testDeviation:.4f}")
-    plt.xlabel("Accuracy")
-    plt.ylabel("Frequency")
-    plt.show()
+    pass
