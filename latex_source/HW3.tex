@@ -1,0 +1,300 @@
+%------------------------------------------------------------
+% DEFINITIONS AND HEADERS -- IGNORE THIS
+%------------------------------------------------------------
+\documentclass{article}
+\usepackage[top=2.25cm, bottom=3cm, left=2.5cm, right=2.4cm]{geometry}
+\usepackage[utf8]{inputenc}
+\usepackage{algpseudocode}
+% Get better typography
+\usepackage[protrusion=true,expansion=true]{microtype}  
+% For algorithms
+\usepackage[boxruled,linesnumbered,vlined,inoutnumbered]{algorithm2e}
+\SetKwInOut{Parameter}{Parameters}
+% For basic math, align, fonts, etc.
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{amssymb}
+\usepackage{mathtools}
+\usepackage{mathrsfs}
+\usepackage{rotating}
+\usepackage{tabularx}
+\usepackage{booktabs}
+\usepackage{soul}
+\usepackage{changepage}
+\usepackage{gensymb} % For \degree
+\usepackage{lscape}
+% For \thead to make line breaks in tables
+\usepackage{array}
+\usepackage{makecell}
+\renewcommand\theadalign{bc}
+\renewcommand\theadfont{\bfseries}
+\renewcommand\theadgape{\Gape[4pt]}
+\renewcommand\cellgape{\Gape[4pt]}
+\usepackage{courier} % For \texttt{foo} to put foo in Courier (for code / variables)
+\usepackage{lipsum} % For dummy text
+% For images
+\usepackage{graphicx}
+\usepackage{subcaption}
+\usepackage[space]{grffile} % For spaces in image names
+% For bibliography
+\usepackage[round]{natbib}
+% For color
+\usepackage{xcolor}
+\definecolor{light-grey}{rgb}{0.9,0.9,0.9}
+\definecolor{dark-red}{rgb}{0.4,0.15,0.15}
+\definecolor{dark-blue}{rgb}{0,0,0.7}
+\definecolor{darkblue}{rgb}{0,0,.6}
+\definecolor{darkred}{rgb}{.58,0,0}
+\definecolor{brighterred}{rgb}{.745,0,0}
+\definecolor{darkgreen}{rgb}{0,.6,0}
+\definecolor{red}{rgb}{.98,0,0}
+\usepackage{environ}
+% Only show sections in table of contents and rename
+\setcounter{tocdepth}{2}
+\renewcommand{\contentsname}{Table of Contents}
+% For links (e.g., clicking a reference takes you to the phy)
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks, linkcolor={dark-blue},
+    citecolor={dark-blue}, urlcolor={dark-blue}
+}
+\newcommand{\HIGHLIGHT}[1]{\textcolor{blue}{\textbf{#1}}}
+% \newcommand{\Solution}[1]{{\color{blue} \paragraph{\bf $\bigstar $ SOLUTION:} { \sf
+%     #1} \bigskip}}
+\newcommand{\TODO}[1]{\textcolor{blue}{\textbf{{#1}}}}
+\newcommand{\POINTS}[1]{\textcolor{purple}{\textbf{{#1}}}}
+\providecommand{\mathcolor}[2]{\textcolor{#1}{#2}}
+% My definition of "summary boxes" (see below)
+\usepackage[most]{tcolorbox}
+\definecolor{boxgray}{rgb}{0.95, 0.95, 0.95}
+\definecolor{boxblue}{rgb}{0.941, 0.941, 0.98}
+\definecolor{boxpink}{rgb}{1.0, 0.93, 0.93}
+\definecolor{boxwhite}{rgb}{1.0, 1.0, 1.0}
+%\definecolor{boxgreen}{rgb}{0.91, 0.96, 0.9}
+\definecolor{boxgreen}{rgb}{0.92, 0.96, 0.92}
+\newtcolorbox{mybox}[1][boxwhite]{%
+  enhanced,
+  boxrule=0.5pt,
+  colframe=black,
+  colback=#1,
+  sharp corners,
+  width=\linewidth,
+  left=1em,
+  right=1em,
+  top=0.5em,
+  bottom=0.5em,
+  boxsep=0pt,
+  before skip=1em,
+  after skip=0.85em,
+}
+%------------------------------------------------------------
+
+
+
+
+\begin{document}
+%-----------------
+%   Homework 3
+%-----------------
+\newpage
+\vspace*{1cm}
+\begin{center}
+    \begin{Large}
+    COMPSCI 589 Homework 3 - Fall 2026
+    \end{Large}
+    \\
+    \vspace{0.15cm}
+    Due \textcolor{darkred}{\textbf{October 20}}, 11:55 pm Eastern Time
+\end{center}
+\addcontentsline{toc}{subsection}{\textbf{Homework 3}}
+
+
+
+
+%---- Instructions ----------------------
+
+\vspace{0.5cm}
+\section*{Instructions}
+\vspace{0.5cm}
+
+\begin{itemize}
+    \item This homework assignment consists of a programming part. 
+    \item While you may discuss problems with your peers (e.g., to discuss high-level approaches), you must answer the questions on your own and implement all solutions independently. In your submission, do explicitly list all students with whom you discussed this assignment. 
+    \item Submissions must be typed. You must use \LaTeX to prepare your submission. Handwritten and scanned submissions will not be accepted. 
+    \item The written report, including your answers, plots, and analysis, should be submitted on Gradescope as a PDF via the appropriate submission link. The source code should be submitted as a single .zip file through the separate programming assignment link on Gradescope.
+    \item We strongly encourage using Python 3 for your homework code. You may use other languages. In either case, you \textit{must} provide clear instructions for running your code and reproducing your experiments. 
+    \item You \textit{may not} use any machine learning-specific libraries in your code, e.g., TensorFlow, PyTorch, or machine learning algorithms implemented in scikit-learn (though you \textit{may} use other functions provided by this library, such as one that splits a dataset into training and testing sets). You may also use libraries such as numpy and matplotlib. If you are not certain whether a specific library is allowed, do ask us.
+    \item All submissions will be checked for plagiarism using two independent plagiarism-detection tools. Renaming variable or function names, moving code within a file, etc., are all strategies that \textit{do not} fool the plagiarism-detection tools we use. Your code will also be compared with submissions from your classmates and with publicly available implementations online. 
+    \item \textcolor{red}{If you get caught, all penalties mentioned in the syllabus \textit{will} be applied---which may include directly failing the course with a letter grade of ``F''}.
+    \begin{center}
+        \textcolor{red}{$\rightarrow$ Before starting this homework, please review this course's policies on plagiarism by  \\reading the corresponding section of the syllabus.}
+    \end{center}
+    \item The automated system will not accept assignments after 11:55 pm on October 20. 
+    \item The TeX file for this homework (which you should use to write your solutions in \LaTeX), as well as the datasets you will investigate, are available on Canvas under ``\textit{Homework \#3 - Supporting Files}''. See below for more details.
+\end{itemize}
+
+% --------------------
+
+
+
+
+
+
+%------ High-Level Overview of the Homework --------------------------
+\newpage
+\noindent {\LARGE{\textbf{Programming Assignment}} \POINTS{[100 Points, total]}}
+\vspace{0.5cm}
+
+\noindent In this homework, you will be implementing the Random Forest algorithm. \textbf{Notice that you may \ul{not} use existing machine learning code for this problem: you must implement the learning algorithms entirely on your own and from scratch.} 
+\vspace{0.5cm}
+
+\noindent In this assignment, you will:
+
+\begin{itemize}
+\item Leverage your implementation of the standard Decision Tree algorithm, based on the Information Gain splitting criterion, to implement a Random Forest classifier.
+%
+\begin{mybox}[boxpink] 
+\textbf{Important}:
+You must reuse \textbf{\textcolor{darkred}{\textit{your}}} previous implementation of the Decision Tree algorithm.
+\end{mybox}
+%
+\begin{mybox}[boxblue] 
+\textbf{Important}:
+Your implementation of the Decision Tree algorithm should support both categorical \textbf{\textcolor{darkred}{\textit{and}}} numerical attributes. 
+
+\vspace{0.25cm}
+
+When determining the best numerical threshold to use when splitting numerical nodes, you may \textit{\textbf{(i)}} use the average value of that attribute across the instances in the partition associated with the current node; or \textit{\textbf{(ii)}} use the more sophisticated (and ``powerful'') technique discussed in Lecture 04 (for students in the remote section) and Lecture 05 (for students in the in-person section). 
+\end{mybox}
+%
+\item Implement a procedure to create bootstrap datasets by sampling (\textit{with replacement}) from the current training set. Each tree in the random forest should then be trained using one of these bootstrap datasets.
+\item Implement a mechanism that, whenever splitting a node, randomly selects $m$ attributes from the complete set of attributes. You should then choose, among those $m$ attributes, the one with the highest Information Gain to split the node. As a heuristic, we usually use $m \approx \sqrt{X}$, where $X$ is the number of attributes describing each instance in the dataset.
+\item Implement a majority voting mechanism that uses the predictions made by all trees in the ensemble to determine the final class/label for each new instance.
+\item Implement the \textit{stratified cross-validation} technique to evaluate the generalization performance of the random forest. For an example of how this technique works, see Figure~\ref{fig:cross-val}. We recommend using $k=5$ folds. Of these, $k-1$ folds will be used to train a random forest composed of $ntree$ trees. Here, \textbf{$ntree$ will be the main adjustable hyperparameter of your algorithm}. The remaining fold (the one not used during training) will be used to evaluate the performance of the random forest itself (\textcolor{darkred}{i.e., \underline{not} the performance of any individual tree separately!}). 
+\begin{mybox}[boxgreen] 
+\textbf{Note}:
+Since you will be combining cross-validation and bootstrapping, it is important to keep in mind how these two steps interact. At each iteration of cross-validation, the $k-1$ folds selected for training should together be treated as the complete training set available for that iteration. You should then create the bootstrap datasets used to train the individual trees by sampling \textit{with replacement} from this training set. In other words, each of the $ntree$ trees in the random forest should be trained on its own bootstrap sample constructed from the instances contained in those $k-1$ folds.
+\end{mybox}
+%
+\item Evaluate the impact that the number of trees (i.e., the $ntree$ hyperparameter) has on the performance of your random forest.
+%
+\end{itemize}
+
+
+\newpage
+\vspace{2cm}
+
+    \begin{figure}[ht!!]
+        \centering
+        \includegraphics[width=0.75\textwidth]{figures/HW3_cross_val_stratified2.png}
+        \caption{Example of how to construct \textit{stratified} folds to perform $k$-fold cross-validation. Here, we assume two classes: \textbf{\texttt{M}} and \textbf{\texttt{F}}. Notice how the complete dataset (shown in the leftmost figure) is not balanced: approximately 3/4 of its instances belong to the class \textbf{\texttt{M}}, and approximately $1/4$ of its instances belong to the class \textbf{\texttt{F}}. We wish to approximately preserve these proportions (i.e., the proportion of instances of class \textbf{\texttt{M}} and the proportion of instances of class \textbf{\texttt{F}}) in each of the $k=5$ folds. To do this, you should first split the original dataset, $D$, into two: one containing only instances of class \textbf{\texttt{M}} (sub-dataset $D_M$), and another one containing only instances of class  \textbf{\texttt{F}} (sub-dataset $D_F$). Then, given the total number of instances in the original dataset ($D$) and the number of folds you are using ($k$), you should be able to determine the size of each fold. Let us assume that each fold, in this example, should have $50$ instances. To construct each fold, you should draw random instances from $D_M$ and $D_F$. In this example, $3/4$ of the instances that you add to the current fold should come from $D_M$, and $1/4$ of the instances that you add to the current fold should come from $D_F$. Notice that because the folds should be disjoint (i.e., an instance should appear in only one fold), after drawing an instance either from $D_M$ or $D_F$, it should be removed from such a set to ensure that it will not be accidentally included as part of another fold. \textit{(Source: \href{https://stats.stackexchange.com/questions/49540/understanding-stratified-cross-validation}{Stack Exchange})}.}
+        \label{fig:cross-val}
+    \end{figure}
+
+
+
+
+
+
+%------ Description of the Expected Deliverables --------------------------
+\section{Deliverables and Datasets}
+
+The main objective of this homework is to study the impact of the number of trees in a random forest (i.e., the $ntree$ hyperparameter) on its performance. \textbf{When constructing each tree in the ensemble, you are free to choose among several stopping criteria}. You may, for instance:
+
+
+\begin{itemize} 
+\item Stop splitting nodes whenever the data partition associated with the current node contains fewer than $n$ instances, for some value of $n$ that you choose empirically. We will refer to this as the \texttt{minimum\_size\_for\_split} criterion.
+\item Stop splitting nodes whenever the information gain resulting from a split is not sufficiently high (even if it is slightly greater than zero). You are free to empirically choose the minimum information gain you would like to use. We will refer to this as the \texttt{minimum\_gain} criterion.
+\item You may stop splitting whenever the current branch of the tree becomes too deep, that is, when its depth exceeds some pre-defined value that you select empirically. We will refer to this as the \texttt{maximum\_depth} stopping criterion.
+\end{itemize}
+%
+\begin{mybox}[boxpink] 
+\textbf{Important:} In all questions below, you should explicitly mention which criterion or criteria you used and the corresponding hyperparameter(s). You should try different options to identify the setting that produces the best possible performance for your algorithm.
+\end{mybox}
+%
+
+
+
+
+
+%------ Description of the Datasets --------------------------
+\newpage
+\noindent In this homework, you will be analyzing two datasets:
+\vspace{0.3cm}
+
+\noindent \textbf{(1) \textcolor{darkblue}{\ul{The Wisconsin Breast Cancer Diagnostic (WDBC) Dataset}}.}
+\noindent The goal here is to train a classifier capable of predicting whether a breast mass is malignant or benign, based on features computed from a digitized image of a breast mass. The dataset is composed of 569 instances. Each instance is described by 30 \textit{numerical} attributes, and there are two classes.
+\vspace{0.5cm}
+
+\noindent \textbf{(2) \textcolor{darkblue}{\ul{The Loan Eligibility Prediction Dataset}}.}
+\noindent Here, the goal is to automatically (and accurately) predict whether a given person should qualify for a loan. Each instance is described by 11 attributes, including the gender of the applicant, whether the applicant is married, their income, information about their credit history, etc. The binary target class to be predicted is whether a given applicant's request for a loan was approved or not. Notice that this dataset contains 7 \textit{categorical} attributes and 4 \textit{numerical} attributes. There is a total of 480 instances in the dataset. 
+\vspace{0.3cm}
+
+\begin{mybox}[boxblue] 
+\textbf{Note:} The datasets above can be found in the ``\textit{Supporting Files}'' ZIP file for this homework on Canvas.
+\end{mybox}
+
+
+
+
+
+
+
+%------ Main Questions --------------------------
+\vspace{0.7cm}
+\section{Questions}
+
+For each dataset, you should:
+
+\begin{enumerate}
+    \item Train a random forest and evaluate it using the stratified cross-validation technique discussed above. You should train random forests with different values of the $ntree$ parameter: 1, 5, 10, 20, 30, 40, and 50.
+    \item For each value of $ntree$, you should measure the accuracy, precision, recall, and F1 score of the resulting random forest. 
+    \item You should then create, for each dataset and for each of the four metrics described above, a graph that shows the value of $ntree$ on the x-axis and the value of the corresponding metric on the y-axis. For example, you should include one graph showing the \textit{accuracy} of the random forest as a function of $ntree$ for \texttt{Dataset \#1}, another graph showing the \textit{precision} of the random forest as a function of $ntree$ for \texttt{Dataset \#1}, and similar graphs for the other metrics and for \texttt{Dataset \#2}.
+    %
+    \begin{mybox}[boxpink] 
+    \textbf{Important:} The analyses mentioned above should result in a total of \textcolor{darkred}{\ul{\textbf{8 graphs}}}. Please indicate clearly in the caption of each figure/graph which results are shown in that graph.
+    \end{mybox}
+    %
+    \item For each metric being evaluated (and for each dataset), discuss which value of $ntree$ you would select if you were to deploy this classifier in real life. Explain your reasoning. 
+    \item Discuss, at a high level, which metrics were more directly affected by changes in the value of $ntree$ and, more generally, how these changes influenced the performance of your algorithm. For example, was the accuracy of the random forest particularly sensitive to increasing $ntree$ beyond a certain value? Was the F1 score a ``harder'' metric to optimize, possibly requiring a larger number of trees in the ensemble? Is there a point beyond which adding more trees does not improve performance (or even makes it worse)?
+\end{enumerate}
+
+
+
+
+
+%-------- Extra Credit Questions --------------------------
+\newpage
+% \vspace{0.5in}
+% \noindent\rule{\textwidth}{1pt}
+% \vspace{0.08cm}
+\noindent \textcolor{purple}{\textbf{\Large{Extra Credit Questions}}}
+\vspace{0.8cm}
+
+\noindent There are two ways in which you may receive extra credit in this homework.
+\vspace{0.75cm}
+
+
+
+    %---- Extra Credit Question QE.1 ----------------------
+    \noindent \textbf{\HIGHLIGHT{[QE.1] Extra points~(\POINTS{10 Points})}} Analyze a third dataset: the \textcolor{darkred}{\textbf{\ul{Raisins Dataset}}}. The goal here is to use morphological features extracted from raisin images to classify each instance as either a Kecimen or a Besni raisin variety. The dataset contains 900 instances. Each instance is described by 7 \textit{numerical} features, and the dataset contains two classes. You should present the same analyses and graphs discussed above.
+    %
+    \begin{mybox}[boxgray] 
+    This dataset can be found in the ``\textit{Supporting Files}'' ZIP file for this homework on Canvas.
+    \end{mybox}
+
+    
+
+    %---- Extra Credit Question QE.2 ----------------------
+    \vspace{1.0cm}
+    \noindent \textbf{\HIGHLIGHT{[QE.2] Extra points~(\POINTS{10 Points})}} Analyze a fourth dataset: the \textcolor{darkred}{\textbf{\ul{Titanic Dataset}}}. On April 15, 1912, the largest passenger liner ever made collided with an iceberg during her maiden voyage. When the Titanic sank, it killed 1502 out of 2224 passengers and crew. One of the reasons the shipwreck resulted in such loss of life was that there were not enough lifeboats for the passengers and crew. Although luck was involved in surviving the sinking, some groups of people were more likely to survive than others. The goal here is to predict whether a given person was likely to survive this tragedy. The dataset contains data for 887 real passengers of the Titanic. Each row represents one person. The columns describe different attributes of the person, including whether they survived (the class/label), their age, their passenger class, sex, and the fare they paid. Notice that this dataset combines \textit{both numerical and categorical attributes}. You should present the same analyses and graphs discussed above.
+    %
+    \begin{mybox}[boxgray] 
+    This dataset can be found in the ``\textit{Supporting Files}'' ZIP file for this homework on Canvas.
+    \end{mybox}
+
+
+
+
+\end{document}
+
