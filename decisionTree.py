@@ -68,7 +68,78 @@ def findInformationGain(dataset, labelset, columnName, overallEntropy):
         temp *= -1
         columnEntropy += (v["total"] / numRows) * temp
 
-    return overallEntropy - columnEntropy
+    return (overallEntropy - columnEntropy, None)
+
+# handle numerical columns and find their info gain
+def handleNumericalCols(dataset, labelset, columnName, overallEntropy):
+    sortedCol = dataset[columnName].sort_values()
+    sortedLabels = labelset.loc[sortedCol.index]
+    
+    thresholdCandidates = []
+    values = sortedCol.to_numpy()
+    labels = sortedLabels.to_numpy()
+    
+    for i in range(len(values) - 1):
+        first = values[i]
+        second = values[i+1]
+        
+        if first == second:
+            continue
+        
+        mean = (first + second) / 2
+        thresholdCandidates.append(mean)
+    
+    bestVal = None
+    bestGain = float('-inf')
+    
+    for val in thresholdCandidates:
+        columnEntropy = helper(dataset, labelset, columnName, val)
+        if overallEntropy - columnEntropy > bestGain:
+            bestGain = overallEntropy - columnEntropy
+            bestVal = val
+    
+    return (bestGain, bestVal)
+    
+# helper to calculate the info gain for numerical columns
+def helper(dataset, labelset, columnName, threshold):
+    # find the unique classes in the labelset
+    classes = labelset.unique()
+    numRows = len(labelset)
+
+    attributeMem = {}
+    attributeMem["leq"] = {c: 0 for c in classes}
+    attributeMem["leq"]["total"] = 0
+    
+    attributeMem["greater"] = {c: 0 for c in classes}
+    attributeMem["greater"]["total"] = 0
+
+    # increment the specific attribute while iterating through rows
+    for i in dataset[columnName].index:
+        attributeVal = dataset[columnName][i]
+        label = labelset[i]
+        
+        if attributeVal <= threshold:
+            attributeMem["leq"][label] += 1
+            attributeMem["leq"]["total"] += 1
+        else:
+            attributeMem["greater"][label] += 1
+            attributeMem["greater"]["total"] += 1
+
+    # find the entropies of the partition
+    columnEntropy = 0
+    for v in attributeMem.values():
+        temp = 0
+        # calculate entropy for a specific attribute
+        for key, val in v.items():
+            if key == "total" or val == 0:
+                continue
+            temp += ((val / v["total"]) * math.log2(val / v["total"]))
+        
+        # find the average entripy of the resulting partitions
+        temp *= -1
+        columnEntropy += (v["total"] / numRows) * temp
+    
+    return columnEntropy
 
 # create a hashmap for each column with their information gain
 def getInfoGainMap(dataset, labelset):
@@ -78,7 +149,10 @@ def getInfoGainMap(dataset, labelset):
 
     # using the overall entropy, find the information gain of each column and add it to the hashmap
     for col in dataset.columns:
-        gain = findInformationGain(dataset, labelset, col, overallEntropy)
+        if pd.api.types.is_numeric_dtype(dataset[col]):
+            gain = handleNumericalCols(dataset, labelset, col, overallEntropy)
+        else:
+            gain = findInformationGain(dataset, labelset, col, overallEntropy)
         gainMap[col] = gain
 
     return gainMap
