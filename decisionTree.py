@@ -140,12 +140,12 @@ def getInfoGainMap(dataset, labelset):
     return gainMap
 
 # recursively build the decision tree
-# recursively build the decision tree
 class Node():
-    def __init__(self, dataset, labelset, parentMajority=None):
+    def __init__(self, dataset, labelset, minSize, parentMajority=None):
         # track the current dataset and labelset
         self.dataset = dataset
         self.labelset = labelset
+        self.minSize = minSize
 
         # fields for the node so the new instance knows what to split on
         self.isLeaf = False
@@ -154,7 +154,7 @@ class Node():
         self.focusColumn = None
         self.children = {}
         self.isNumerical = False
-        self.threshold = None  # CHANGED: set up front so leaf nodes have this attribute too
+        self.threshold = None
 
         # counter for each unique label
         labelCounts = {lbl: 0 for lbl in labelset.unique()}
@@ -169,8 +169,8 @@ class Node():
                 temp = v
                 self.majority = k
 
-        # base case 1: less than 3 rows, we also stop
-        if len(labelset) < 3:
+        # base case 1: less than or equal to minSize, then create a leaf node
+        if len(labelset) <= self.minSize:
             self.isLeaf = True
             self.leafLabel = self.majority
             return
@@ -192,7 +192,7 @@ class Node():
                 currGainVal = v
                 highestGainCol = k
 
-        # CHANGED: base case 3: no column could split these rows (or no columns are left), so make a leaf
+        # base case 3: no column could split these rows/no columns are left
         if highestGainCol is None:
             self.isLeaf = True
             self.leafLabel = self.majority
@@ -217,19 +217,27 @@ class Node():
             for attr, indexList in groups.items():
                 subDataset = dataset.loc[indexList].drop(columns=[self.focusColumn])
                 subLabelset = labelset.loc[indexList]
-                self.children[attr] = Node(subDataset, subLabelset, parentMajority=self.majority)
+                self.children[attr] = Node(subDataset, subLabelset, self.minSize, self.majority)
         else:
-            # CHANGED: split on the threshold using a numpy mask so rows are picked by position
-            mask = (dataset[self.focusColumn] <= self.threshold).to_numpy()
-
+            # split on the threshold using a numpy mask so rows are picked by position
+            maskList = [False] * len(self.dataset)
+            temp = dataset[self.focusColumn]
+            
+            for i in range(len(dataset)):
+                if temp.iloc[i] <= self.threshold:
+                    maskList[i] = True
+                    
+            mask = np.array(maskList)
+                
             # numerical columns are NOT dropped, they can be split again with a different threshold
-            self.children["leq"] = Node(dataset[mask], labelset[mask], parentMajority=self.majority)
-            self.children["gt"] = Node(dataset[~mask], labelset[~mask], parentMajority=self.majority)
+            self.children["leq"] = Node(dataset[mask], labelset[mask], self.minSize, self.majority)
+            self.children["gt"] = Node(dataset[~mask], labelset[~mask], self.minSize, self.majority)
 
 # create a tree using the Node class
 class Tree():
-    def __init__(self, dataset, labelset):
-        self.root = Node(dataset, labelset)
+    def __init__(self, dataset, labelset, minSize=1):
+        self.minSize = minSize
+        self.root = Node(dataset, labelset, minSize)
 
     # predicts a label given an instance
     def predict(self, instance):
@@ -242,6 +250,12 @@ class Tree():
             return node.leafLabel
 
         attrValue = instance[node.focusColumn]
+        
+        # if numerical column, split based on the instance's value
+        if node.isNumerical:
+            if attrValue <= node.threshold:
+                return self.helper(node.children["leq"], instance)
+            return self.helper(node.children["gt"], instance)
 
         # base case 2: if we cant recurse down to the next level, just return the best guess (which is the majority label for this node)
         if attrValue not in node.children:
@@ -275,7 +289,7 @@ if __name__ == "__main__":
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
         
         # create a new decision tree based on the current training set
-        tree = Tree(X_train, y_train)
+        tree = Tree(X_train, y_train, 1)
         
         # get the accuracy ratio for train and test dataset
         trainRatio = calculateAccuracy(tree, X_train, y_train)
