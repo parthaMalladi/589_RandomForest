@@ -75,72 +75,54 @@ def handleNumericalCols(dataset, labelset, columnName, overallEntropy):
     sortedCol = dataset[columnName].sort_values()
     sortedLabels = labelset.loc[sortedCol.index]
     
-    thresholdCandidates = []
+    # lists of only the data we want to focus on
     values = sortedCol.to_numpy()
     labels = sortedLabels.to_numpy()
     
-    for i in range(len(values) - 1):
-        first = values[i]
-        second = values[i+1]
+    size = len(values)
+    left = {"total":0}
+    right = {"total":0}
+    
+    for l in labels:
+        if l not in right:
+            right[l] = 0
+            left[l] = 0
         
-        if first == second:
+        right[l] += 1
+        right["total"] += 1
+    
+    bestGain = float('-inf')
+    bestVal = None
+    
+    for i in range(size - 1):
+        right[labels[i]] -= 1
+        left[labels[i]] += 1
+        
+        right["total"] -= 1
+        left["total"] += 1
+        
+        if values[i] == values[i+1]:
             continue
         
-        mean = (first + second) / 2
-        thresholdCandidates.append(mean)
-    
-    bestVal = None
-    bestGain = float('-inf')
-    
-    for val in thresholdCandidates:
-        columnEntropy = helper(dataset, labelset, columnName, val)
-        if overallEntropy - columnEntropy > bestGain:
-            bestGain = overallEntropy - columnEntropy
-            bestVal = val
+        threshold = (values[i] + values[i+1]) / 2
+        avgEntropy = ((left["total"] / size) * getColumnEntropy(left)) + ((right["total"] / size) * getColumnEntropy(right))
+        
+        infoGain = overallEntropy - avgEntropy
+        if infoGain > bestGain:
+            bestGain = infoGain
+            bestVal = threshold
     
     return (bestGain, bestVal)
-    
-# helper to calculate the info gain for numerical columns
-def helper(dataset, labelset, columnName, threshold):
-    # find the unique classes in the labelset
-    classes = labelset.unique()
-    numRows = len(labelset)
-
-    attributeMem = {}
-    attributeMem["leq"] = {c: 0 for c in classes}
-    attributeMem["leq"]["total"] = 0
-    
-    attributeMem["greater"] = {c: 0 for c in classes}
-    attributeMem["greater"]["total"] = 0
-
-    # increment the specific attribute while iterating through rows
-    for i in dataset[columnName].index:
-        attributeVal = dataset[columnName][i]
-        label = labelset[i]
         
-        if attributeVal <= threshold:
-            attributeMem["leq"][label] += 1
-            attributeMem["leq"]["total"] += 1
-        else:
-            attributeMem["greater"][label] += 1
-            attributeMem["greater"]["total"] += 1
-
-    # find the entropies of the partition
-    columnEntropy = 0
-    for v in attributeMem.values():
-        temp = 0
-        # calculate entropy for a specific attribute
-        for key, val in v.items():
-            if key == "total" or val == 0:
-                continue
-            temp += ((val / v["total"]) * math.log2(val / v["total"]))
-        
-        # find the average entripy of the resulting partitions
-        temp *= -1
-        columnEntropy += (v["total"] / numRows) * temp
+def getColumnEntropy(mem):
+    temp = 0
+    for key, val in mem.items():
+        if key == "total" or val == 0:
+            continue
+        temp += ((val / mem["total"]) * math.log2(val / mem["total"]))
     
-    return columnEntropy
-
+    return -temp
+           
 # create a hashmap for each column with their information gain
 def getInfoGainMap(dataset, labelset):
     # find overall entropy
@@ -158,6 +140,7 @@ def getInfoGainMap(dataset, labelset):
     return gainMap
 
 # recursively build the decision tree
+# recursively build the decision tree
 class Node():
     def __init__(self, dataset, labelset, parentMajority=None):
         # track the current dataset and labelset
@@ -170,6 +153,8 @@ class Node():
         self.majority = None
         self.focusColumn = None
         self.children = {}
+        self.isNumerical = False
+        self.threshold = None  # CHANGED: set up front so leaf nodes have this attribute too
 
         # counter for each unique label
         labelCounts = {lbl: 0 for lbl in labelset.unique()}
@@ -184,7 +169,13 @@ class Node():
                 temp = v
                 self.majority = k
 
-        # base case: if all labels are the same then we are at a leaf node
+        # base case 1: less than 3 rows, we also stop
+        if len(labelset) < 3:
+            self.isLeaf = True
+            self.leafLabel = self.majority
+            return
+        
+        # base case 2: if all labels are the same then we are at a leaf node
         uniqueLabels = labelset.unique()
         if len(uniqueLabels) == 1:
             self.isLeaf = True
@@ -194,29 +185,46 @@ class Node():
         # find the information gain map
         gainMap = getInfoGainMap(dataset, labelset)
         highestGainCol = None
-        currGainVal = float('-inf')
+        currGainVal = (float('-inf'), None)
 
         for k, v in gainMap.items():
-            if v > currGainVal:
+            if v[0] > currGainVal[0]:
                 currGainVal = v
                 highestGainCol = k
 
+        # CHANGED: base case 3: no column could split these rows (or no columns are left), so make a leaf
+        if highestGainCol is None:
+            self.isLeaf = True
+            self.leafLabel = self.majority
+            return
+
         # field to track the column to split on for this node
         self.focusColumn = highestGainCol
+        self.threshold = currGainVal[1]
+        if self.threshold != None:
+            self.isNumerical = True
 
-        # find all the unique attributes for the focus column
-        uniqueAttributes = dataset[self.focusColumn].unique()
-        groups = {}
+        if not self.isNumerical:
+            # find all the unique attributes for the focus column
+            uniqueAttributes = dataset[self.focusColumn].unique()
+            groups = {}
 
-        # for each unique attribute, get the indexes for those ows
-        for attr in uniqueAttributes:
-            groups[attr] = dataset[dataset[self.focusColumn] == attr].index.tolist()
+            # for each unique attribute, get the indexes for those rows
+            for attr in uniqueAttributes:
+                groups[attr] = dataset[dataset[self.focusColumn] == attr].index.tolist()
 
-        # based on the indexes collected, split into each child branch and drop the current focus column to create the child nodes
-        for attr, indexList in groups.items():
-            subDataset = dataset.loc[indexList].drop(columns=[self.focusColumn])
-            subLabelset = labelset.loc[indexList]
-            self.children[attr] = Node(subDataset, subLabelset, parentMajority=self.majority)
+            # based on the indexes collected, split into each child branch and drop the current focus column to create the child nodes
+            for attr, indexList in groups.items():
+                subDataset = dataset.loc[indexList].drop(columns=[self.focusColumn])
+                subLabelset = labelset.loc[indexList]
+                self.children[attr] = Node(subDataset, subLabelset, parentMajority=self.majority)
+        else:
+            # CHANGED: split on the threshold using a numpy mask so rows are picked by position
+            mask = (dataset[self.focusColumn] <= self.threshold).to_numpy()
+
+            # numerical columns are NOT dropped, they can be split again with a different threshold
+            self.children["leq"] = Node(dataset[mask], labelset[mask], parentMajority=self.majority)
+            self.children["gt"] = Node(dataset[~mask], labelset[~mask], parentMajority=self.majority)
 
 # create a tree using the Node class
 class Tree():
