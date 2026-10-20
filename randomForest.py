@@ -18,7 +18,7 @@ class Bagging:
         picks = np.random.randint(0, self.size, size=self.size)
         sample = self.data.iloc[picks].reset_index(drop=True)
         
-        rows, cols = sample.shape
+        cols = sample.shape[1]
         X = sample.iloc[:, 0:cols - 1]
         y = sample.iloc[:, cols - 1]
         return X, y
@@ -56,8 +56,10 @@ class kFold:
         self.data = data.reset_index(drop=True)
         self.k = k
         self.size = len(data)
-        buckets = self.makeFolds()
-        self.folds = [self.data.loc[b] for b in buckets]
+        self.buckets = self.makeFolds()
+        self.folds = []
+        for b in self.buckets:
+            self.folds.append(self.data.loc[b])
     
     def makeFolds(self):
         cols = self.data.shape[1]
@@ -66,9 +68,10 @@ class kFold:
         buckets = [[] for _ in range(self.k)]
         counter = 0
         
+        yList = y.to_numpy()
         classes = y.unique()
         for cl in classes:
-            indices = np.where(y.to_numpy() == cl)[0].tolist()
+            indices = np.where(yList == cl)[0].tolist()
             np.random.shuffle(indices)
             
             for idx in indices:
@@ -123,7 +126,7 @@ def evaluate(folds, ntree, minSize):
     return (np.mean(accuracy), np.mean(precision), np.mean(recall), np.mean(f1Score))
                     
 if __name__ == "__main__":
-    data = pd.read_csv("datasets/car.csv")
+    data = pd.read_csv("datasets/loan.csv")
     
     kf = kFold(data, 5)
     for ntree in [1, 5, 10, 20, 30, 40, 50]:

@@ -241,7 +241,7 @@ if __name__ == "__main__":
     from sklearn.model_selection import train_test_split
 
     # load data
-    data = pd.read_csv("datasets/car.csv")
+    data = pd.read_csv("datasets/loan.csv")
     rows, cols = data.shape
 
     # split into attributes and label columns
