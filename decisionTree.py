@@ -22,7 +22,7 @@ def findEntropy(labelset):
 
     return -1 * overallEntropy
 
-# find information gain for a specific column
+# find information gain for a specific categorical column
 def findInformationGain(dataset, labelset, columnName, overallEntropy):
     # find the unique classes in the labelset
     classes = labelset.unique()
@@ -62,6 +62,7 @@ def findInformationGain(dataset, labelset, columnName, overallEntropy):
 
 # handle numerical columns and find their info gain
 def handleNumericalCols(dataset, labelset, columnName, overallEntropy):
+    # sort the column in increasing order and also move around the labels
     sortedCol = dataset[columnName].sort_values()
     sortedLabels = labelset.loc[sortedCol.index]
     
@@ -69,10 +70,14 @@ def handleNumericalCols(dataset, labelset, columnName, overallEntropy):
     values = sortedCol.to_numpy()
     labels = sortedLabels.to_numpy()
     
+    # create a map for left and right values
+    # values on the left are <= the threshold
+    # values on the right are > the threshold
     size = len(values)
     left = {"total":0}
     right = {"total":0}
     
+    # start with all values on the right
     for l in labels:
         if l not in right:
             right[l] = 0
@@ -81,9 +86,11 @@ def handleNumericalCols(dataset, labelset, columnName, overallEntropy):
         right[l] += 1
         right["total"] += 1
     
+    # track the best gain value and threshold value
     bestGain = float('-inf')
     bestVal = None
     
+    # loop through every row and calculate the entropy for every possible threshold value and keep the best
     for i in range(size - 1):
         right[labels[i]] -= 1
         left[labels[i]] += 1
@@ -94,16 +101,19 @@ def handleNumericalCols(dataset, labelset, columnName, overallEntropy):
         if values[i] == values[i+1]:
             continue
         
+        # threshold is the mean for every two unique rows
         threshold = (values[i] + values[i+1]) / 2
         avgEntropy = ((left["total"] / size) * getColumnEntropy(left)) + ((right["total"] / size) * getColumnEntropy(right))
         
+        # update tracking variables if info gain is higher
         infoGain = overallEntropy - avgEntropy
         if infoGain > bestGain:
             bestGain = infoGain
             bestVal = threshold
     
     return (bestGain, bestVal)
-        
+
+# helper to calculate the entropy of a column for a specific label
 def getColumnEntropy(mem):
     temp = 0
     for key, val in mem.items():
@@ -219,13 +229,14 @@ class Node():
             maskList = [False] * len(self.dataset)
             temp = dataset[self.focusColumn]
             
+            # if a row is <= threshold, mark it as true, otherwise false
             for i in range(len(dataset)):
                 if temp.iloc[i] <= self.threshold:
                     maskList[i] = True
                     
             mask = np.array(maskList)
                 
-            # numerical columns are NOT dropped, they can be split again with a different threshold
+            # partition children into greater than or less than or equal to branches. Don't need to drop columns
             self.children["leq"] = Node(dataset[mask], labelset[mask], self.minSize, self.m, self.majority)
             self.children["gt"] = Node(dataset[~mask], labelset[~mask], self.minSize, self.m, self.majority)
 
